@@ -1,0 +1,84 @@
+name: dbt CI (Pull Request Validation)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'movielens/**'
+      - '.github/workflows/ci.yml'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: movielens
+
+env:
+  SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+  SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE || 'TRANSFORM' }}
+  SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE || 'COMPUTE_WH' }}
+  SNOWFLAKE_DEV_DATABASE: ${{ secrets.SNOWFLAKE_DEV_DATABASE || 'movielens_dev' }}
+  SNOWFLAKE_DEV_SCHEMA: ${{ secrets.SNOWFLAKE_DEV_SCHEMA || 'dev' }}
+
+jobs:
+  lint-and-validate:
+    name: Lint, Unit Test & Integration Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-snowflake sqlfluff sqlfluff-templater-dbt
+
+      - name: Lint SQL models with SQLFluff
+        run: |
+          sqlfluff lint models/
+
+      - name: Install dbt package dependencies
+        run: |
+          dbt deps
+
+      - name: Validate dbt connection & profile
+        run: |
+          dbt debug --target dev
+
+      - name: Compile dbt project
+        run: |
+          dbt compile --target dev
+
+      - name: Run dbt Unit Tests (Mock Data Logic Verification)
+        run: |
+          dbt test --select "test_type:unit" --target dev
+
+      - name: Restore production manifest (for Slim CI)
+        id: restore-manifest
+        uses: actions/cache/restore@v4
+        with:
+          path: movielens/prod_manifest
+          key: dbt-prod-manifest-${{ github.event.pull_request.base.sha }}
+          restore-keys: |
+            dbt-prod-manifest-
+
+      - name: Run Slim CI (Modified models & dependencies)
+        if: steps.restore-manifest.outputs.cache-hit == 'true'
+        run: |
+          echo "Production manifest found. Running Slim CI on modified nodes..."
+          dbt build --target dev --select "state:modified+" --defer --state ./prod_manifest
+
+      - name: Run Full Build (Fallback if no manifest cache)
+        if: steps.restore-manifest.outputs.cache-hit != 'true'
+        run: |
+          echo "No production manifest found. Running standard dev build..."
+          dbt build --target dev

@@ -1,0 +1,101 @@
+name: dbt CD (Production Deployment)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'movielens/**'
+      - '.github/workflows/cd.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+defaults:
+  run:
+    working-directory: movielens
+
+env:
+  SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+  SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+  SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+  SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE || 'TRANSFORM' }}
+  SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE || 'COMPUTE_WH' }}
+  SNOWFLAKE_PROD_DATABASE: ${{ secrets.SNOWFLAKE_PROD_DATABASE || 'movielens_prod' }}
+  SNOWFLAKE_PROD_SCHEMA: ${{ secrets.SNOWFLAKE_PROD_SCHEMA || 'raw' }}
+
+jobs:
+  deploy-to-prod:
+    name: Build, Deploy & Publish Docs
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install dbt-snowflake
+
+      - name: Install dbt package dependencies
+        run: |
+          dbt deps
+
+      - name: Validate Snowflake Production Connection
+        run: |
+          dbt debug --target prod
+
+      - name: Run Production dbt Build (Models, Seeds, Tests)
+        run: |
+          dbt build --target prod
+
+      - name: Generate dbt Documentation & Catalog
+        run: |
+          dbt docs generate --target prod
+
+      - name: Prepare Manifest for Caching
+        run: |
+          mkdir -p prod_manifest
+          cp target/manifest.json prod_manifest/manifest.json
+
+      - name: Cache Production Manifest for Slim CI
+        uses: actions/cache/save@v4
+        with:
+          path: movielens/prod_manifest
+          key: dbt-prod-manifest-${{ github.sha }}
+
+      - name: Upload Production Manifest Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbt-prod-manifest
+          path: movielens/target/manifest.json
+          retention-days: 30
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: movielens/target
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

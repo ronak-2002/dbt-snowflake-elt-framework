@@ -1,7 +1,7 @@
 # Python virtual environment
 venv/
 .env
-
+.vscode/
 # Root-level logs
 logs/
 

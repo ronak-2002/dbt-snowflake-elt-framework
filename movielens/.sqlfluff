@@ -1,0 +1,23 @@
+[sqlfluff]
+dialect = snowflake
+templater = dbt
+runaway_limit = 10
+max_line_length = 120
+indent_unit = space
+
+[sqlfluff:templater:dbt]
+project_dir = .
+profiles_dir = .
+target = dev
+
+[sqlfluff:indentation]
+tab_space_size = 4
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = upper

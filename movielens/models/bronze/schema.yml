@@ -1,0 +1,24 @@
+version: 2
+
+models:
+  - name: movies
+    description: "Bronze layer table for raw MovieLens movies."
+    columns:
+      - name: movieid
+        description: "Primary key identifier for a movie."
+        tests:
+          - not_null
+
+unit_tests:
+  - name: test_movies_source_passthrough
+    description: "Unit test validating the bronze movies logic produces expected records from mock source data."
+    model: movies
+    given:
+      - input: source('raw_data', 'raw_movies')
+        rows:
+          - {movieid: 1, title: 'Toy Story (1995)', genres: 'Adventure|Animation|Children|Comedy|Fantasy'}
+          - {movieid: 2, title: 'Jumanji (1995)', genres: 'Adventure|Children|Fantasy'}
+    expect:
+      rows:
+        - {movieid: 1, title: 'Toy Story (1995)', genres: 'Adventure|Animation|Children|Comedy|Fantasy'}
+        - {movieid: 2, title: 'Jumanji (1995)', genres: 'Adventure|Children|Fantasy'}
