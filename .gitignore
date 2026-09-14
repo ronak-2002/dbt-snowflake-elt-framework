@@ -1,0 +1,10 @@
+# Python virtual environment
+venv/
+.env
+
+# Root-level logs
+logs/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
