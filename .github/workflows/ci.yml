@@ -42,13 +42,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Install dbt package dependencies
+        run: |
+          dbt deps --profiles-dir .
+
       - name: Lint SQL models with SQLFluff
         run: |
           sqlfluff lint models/
-
-      - name: Install dbt package dependencies
-        run: |
-          dbt deps
 
       - name: Validate dbt connection & profile
         run: |
