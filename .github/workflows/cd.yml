@@ -52,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install dbt-snowflake
+          pip install -r requirements.txt
 
       - name: Install dbt package dependencies
         run: |
@@ -60,15 +60,15 @@ jobs:
 
       - name: Validate Snowflake Production Connection
         run: |
-          dbt debug --target prod
+          dbt debug --profiles-dir . --target prod
 
       - name: Run Production dbt Build (Models, Seeds, Tests)
         run: |
-          dbt build --target prod
+          dbt build --profiles-dir . --target prod
 
       - name: Generate dbt Documentation & Catalog
         run: |
-          dbt docs generate --target prod
+          dbt docs generate --profiles-dir . --target prod
 
       - name: Prepare Manifest for Caching
         run: |

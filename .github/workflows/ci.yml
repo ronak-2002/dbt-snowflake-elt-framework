@@ -40,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install dbt-snowflake sqlfluff sqlfluff-templater-dbt
+          pip install -r requirements.txt
 
       - name: Lint SQL models with SQLFluff
         run: |
@@ -52,15 +52,15 @@ jobs:
 
       - name: Validate dbt connection & profile
         run: |
-          dbt debug --target dev
+          dbt debug --profiles-dir . --target dev
 
       - name: Compile dbt project
         run: |
-          dbt compile --target dev
+          dbt compile --profiles-dir . --target dev
 
       - name: Run dbt Unit Tests (Mock Data Logic Verification)
         run: |
-          dbt test --select "test_type:unit" --target dev
+          dbt test --profiles-dir . --select "test_type:unit" --target dev
 
       - name: Restore production manifest (for Slim CI)
         id: restore-manifest
@@ -75,10 +75,10 @@ jobs:
         if: steps.restore-manifest.outputs.cache-hit == 'true'
         run: |
           echo "Production manifest found. Running Slim CI on modified nodes..."
-          dbt build --target dev --select "state:modified+" --defer --state ./prod_manifest
+          dbt build --profiles-dir . --target dev --select "state:modified+" --defer --state ./prod_manifest
 
       - name: Run Full Build (Fallback if no manifest cache)
         if: steps.restore-manifest.outputs.cache-hit != 'true'
         run: |
           echo "No production manifest found. Running standard dev build..."
-          dbt build --target dev
+          dbt build --profiles-dir . --target dev

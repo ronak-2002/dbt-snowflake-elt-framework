@@ -1,0 +1,6 @@
+# Core dbt adapter for Snowflake
+dbt-snowflake==1.9.0
+
+# SQL linting — must be compatible with sqlfluff-templater-dbt
+sqlfluff==3.3.1
+sqlfluff-templater-dbt==3.3.1

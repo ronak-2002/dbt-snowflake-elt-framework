@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: raw_data
-    database: '{{ target.database }}'
+    database: "{{ target.database }}"
     schema: raw
     tables:
       - name: raw_movies

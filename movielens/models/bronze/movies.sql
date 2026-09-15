@@ -1,4 +1,4 @@
-with src_movies as (
-    Select * from {{ source('raw_data', 'raw_movies')}}
+WITH src_movies AS (
+    SELECT * FROM {{ source('raw_data', 'raw_movies') }}
 )
-Select * from src_movies
+SELECT * FROM src_movies
