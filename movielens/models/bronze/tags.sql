@@ -1,10 +1,8 @@
-{% set raw_src = source('raw_data', 'raw_tags') %}
-{% set csv_format = raw_src.database ~ '.' ~ raw_src.schema ~ '.CSV_FORMAT' %}
-
 {{
     config(
         pre_hook="""
-            CREATE OR REPLACE FILE FORMAT """ ~ csv_format ~ """
+            CREATE OR REPLACE FILE FORMAT
+                {{ source('raw_data', 'raw_tags').database }}.{{ source('raw_data', 'raw_tags').schema }}.CSV_FORMAT
                 TYPE = 'CSV'
                 FIELD_DELIMITER = ','
                 SKIP_HEADER = 1
@@ -14,6 +12,9 @@
         """
     )
 }}
+
+{% set raw_src = source('raw_data', 'raw_tags') %}
+{% set csv_format = raw_src.database ~ '.' ~ raw_src.schema ~ '.CSV_FORMAT' %}
 
 WITH stage_data AS (
     SELECT

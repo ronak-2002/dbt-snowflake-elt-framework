@@ -8,7 +8,7 @@ movielens:
       role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORM') }}"
       database: "{{ env_var('SNOWFLAKE_DEV_DATABASE', 'movielens_dev') }}"
       warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
-      schema: "{{ env_var('SNOWFLAKE_DEV_SCHEMA', 'dev') }}"
+      schema: "{{ env_var('SNOWFLAKE_DEV_SCHEMA', 'bronze') }}"
       threads: 4
 
     prod:
@@ -19,7 +19,7 @@ movielens:
       role: "{{ env_var('SNOWFLAKE_ROLE', 'TRANSFORM') }}"
       database: "{{ env_var('SNOWFLAKE_PROD_DATABASE', 'movielens_prod') }}"
       warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'COMPUTE_WH') }}"
-      schema: "{{ env_var('SNOWFLAKE_PROD_SCHEMA', 'raw') }}"
+      schema: "{{ env_var('SNOWFLAKE_PROD_SCHEMA', 'bronze') }}"
       threads: 4
 
   target: dev
