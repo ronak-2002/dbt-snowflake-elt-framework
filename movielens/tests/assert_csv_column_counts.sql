@@ -15,112 +15,78 @@
 
 {% set csv_format = source('raw_data', 'raw_movies').database ~ '.' ~ source('raw_data', 'raw_movies').schema ~ '.CSV_FORMAT' %}
 
--- Check for EXTRA columns (column N+1 has data when only N columns expected)
-
-SELECT 'movies' AS model_name, 3 AS expected_col_count, 'csv has more columns than expected' AS issue
+SELECT
+    'movies' AS model_name,
+    3 AS expected_col_count,
+    COUNT(CASE WHEN $4 IS NOT NULL THEN 1 END) AS extra_col_rows,
+    COUNT($3) AS last_col_rows
 FROM @{{ source('raw_data', 'raw_movies') }}
     (FILE_FORMAT => '{{ csv_format }}')
-WHERE $4 IS NOT NULL
-LIMIT 1
+GROUP BY 1, 2
+HAVING COUNT(CASE WHEN $4 IS NOT NULL THEN 1 END) > 0
+    OR COUNT($3) = 0
 
 UNION ALL
 
-SELECT 'ratings', 4, 'csv has more columns than expected'
+SELECT
+    'ratings',
+    4,
+    COUNT(CASE WHEN $5 IS NOT NULL THEN 1 END),
+    COUNT($4)
 FROM @{{ source('raw_data', 'raw_ratings') }}
     (FILE_FORMAT => '{{ csv_format }}')
-WHERE $5 IS NOT NULL
-LIMIT 1
+GROUP BY 1, 2
+HAVING COUNT(CASE WHEN $5 IS NOT NULL THEN 1 END) > 0
+    OR COUNT($4) = 0
 
 UNION ALL
 
-SELECT 'tags', 4, 'csv has more columns than expected'
+SELECT
+    'tags',
+    4,
+    COUNT(CASE WHEN $5 IS NOT NULL THEN 1 END),
+    COUNT($4)
 FROM @{{ source('raw_data', 'raw_tags') }}
     (FILE_FORMAT => '{{ csv_format }}')
-WHERE $5 IS NOT NULL
-LIMIT 1
+GROUP BY 1, 2
+HAVING COUNT(CASE WHEN $5 IS NOT NULL THEN 1 END) > 0
+    OR COUNT($4) = 0
 
 UNION ALL
 
-SELECT 'genome_scores', 3, 'csv has more columns than expected'
+SELECT
+    'genome_scores',
+    3,
+    COUNT(CASE WHEN $4 IS NOT NULL THEN 1 END),
+    COUNT($3)
 FROM @{{ source('raw_data', 'raw_genome_scores') }}
     (FILE_FORMAT => '{{ csv_format }}')
-WHERE $4 IS NOT NULL
-LIMIT 1
+GROUP BY 1, 2
+HAVING COUNT(CASE WHEN $4 IS NOT NULL THEN 1 END) > 0
+    OR COUNT($3) = 0
 
 UNION ALL
 
-SELECT 'genome_tags', 2, 'csv has more columns than expected'
+SELECT
+    'genome_tags',
+    2,
+    COUNT(CASE WHEN $3 IS NOT NULL THEN 1 END),
+    COUNT($2)
 FROM @{{ source('raw_data', 'raw_genome_tags') }}
     (FILE_FORMAT => '{{ csv_format }}')
-WHERE $3 IS NOT NULL
-LIMIT 1
+GROUP BY 1, 2
+HAVING COUNT(CASE WHEN $3 IS NOT NULL THEN 1 END) > 0
+    OR COUNT($2) = 0
 
 UNION ALL
 
-SELECT 'links', 3, 'csv has more columns than expected'
+SELECT
+    'links',
+    3,
+    COUNT(CASE WHEN $4 IS NOT NULL THEN 1 END),
+    COUNT($3)
 FROM @{{ source('raw_data', 'raw_links') }}
     (FILE_FORMAT => '{{ csv_format }}')
-WHERE $4 IS NOT NULL
-LIMIT 1
-
--- Check for FEWER columns (column N is NULL for all rows)
-
-UNION ALL
-
-SELECT 'movies', 3, 'csv has fewer columns than expected'
-WHERE NOT EXISTS (
-    SELECT 1 FROM @{{ source('raw_data', 'raw_movies') }}
-        (FILE_FORMAT => '{{ csv_format }}')
-    WHERE $3 IS NOT NULL
-    LIMIT 1
-)
-
-UNION ALL
-
-SELECT 'ratings', 4, 'csv has fewer columns than expected'
-WHERE NOT EXISTS (
-    SELECT 1 FROM @{{ source('raw_data', 'raw_ratings') }}
-        (FILE_FORMAT => '{{ csv_format }}')
-    WHERE $4 IS NOT NULL
-    LIMIT 1
-)
-
-UNION ALL
-
-SELECT 'tags', 4, 'csv has fewer columns than expected'
-WHERE NOT EXISTS (
-    SELECT 1 FROM @{{ source('raw_data', 'raw_tags') }}
-        (FILE_FORMAT => '{{ csv_format }}')
-    WHERE $4 IS NOT NULL
-    LIMIT 1
-)
-
-UNION ALL
-
-SELECT 'genome_scores', 3, 'csv has fewer columns than expected'
-WHERE NOT EXISTS (
-    SELECT 1 FROM @{{ source('raw_data', 'raw_genome_scores') }}
-        (FILE_FORMAT => '{{ csv_format }}')
-    WHERE $3 IS NOT NULL
-    LIMIT 1
-)
-
-UNION ALL
-
-SELECT 'genome_tags', 2, 'csv has fewer columns than expected'
-WHERE NOT EXISTS (
-    SELECT 1 FROM @{{ source('raw_data', 'raw_genome_tags') }}
-        (FILE_FORMAT => '{{ csv_format }}')
-    WHERE $2 IS NOT NULL
-    LIMIT 1
-)
-
-UNION ALL
-
-SELECT 'links', 3, 'csv has fewer columns than expected'
-WHERE NOT EXISTS (
-    SELECT 1 FROM @{{ source('raw_data', 'raw_links') }}
-        (FILE_FORMAT => '{{ csv_format }}')
-    WHERE $3 IS NOT NULL
-    LIMIT 1
-)
+GROUP BY 1, 2
+HAVING COUNT(CASE WHEN $4 IS NOT NULL THEN 1 END) > 0
+    OR COUNT($3) = 0
