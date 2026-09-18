@@ -2,23 +2,144 @@ version: 2
 
 models:
   - name: movies
-    description: "Bronze layer table for raw MovieLens movies."
+    description: Raw movies data ingested from the MovieLens CSV stage. Each row represents a single movie with its title and pipe-delimited genre list.
     columns:
-      - name: movieid
-        description: "Primary key identifier for a movie."
+      - name: movie_id
+        description: Unique identifier for each movie.
+        tests:
+          - not_null
+          - unique
+      - name: title
+        description: Title of the movie, typically including the release year in parentheses.
+        tests:
+          - not_null
+      - name: genres
+        description: Pipe-delimited list of genres associated with the movie (e.g. "Action|Comedy|Drama").
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
         tests:
           - not_null
 
-unit_tests:
-  - name: test_movies_source_passthrough
-    description: "Unit test validating the bronze movies logic produces expected records from mock source data."
-    model: movies
-    given:
-      - input: source('raw_data', 'raw_movies')
-        rows:
-          - {movieid: 1, title: 'Toy Story (1995)', genres: 'Adventure|Animation|Children|Comedy|Fantasy'}
-          - {movieid: 2, title: 'Jumanji (1995)', genres: 'Adventure|Children|Fantasy'}
-    expect:
-      rows:
-        - {movieid: 1, title: 'Toy Story (1995)', genres: 'Adventure|Animation|Children|Comedy|Fantasy'}
-        - {movieid: 2, title: 'Jumanji (1995)', genres: 'Adventure|Children|Fantasy'}
+  - name: ratings
+    description: Raw user ratings data ingested from the MovieLens CSV stage. Each row represents a single rating given by a user to a movie.
+    columns:
+      - name: user_id
+        description: Identifier for the user who submitted the rating.
+        tests:
+          - not_null
+      - name: movie_id
+        description: Identifier for the movie being rated.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('movies')
+                field: movie_id
+      - name: rating
+        description: Rating value given by the user on a 0.5 to 5.0 scale in half-star increments.
+        tests:
+          - not_null
+      - name: timestamp
+        description: Unix epoch timestamp of when the rating was submitted.
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
+        tests:
+          - not_null
+
+  - name: tags
+    description: Raw user-generated tags data ingested from the MovieLens CSV stage. Each row represents a single tag applied by a user to a movie.
+    columns:
+      - name: user_id
+        description: Identifier for the user who created the tag.
+        tests:
+          - not_null
+      - name: movie_id
+        description: Identifier for the movie the tag is applied to.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('movies')
+                field: movie_id
+      - name: tag
+        description: Free-text tag content applied by the user.
+        tests:
+          - not_null
+      - name: timestamp
+        description: Unix epoch timestamp of when the tag was created.
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
+        tests:
+          - not_null
+
+  - name: genome_scores
+    description: Raw genome tag relevance scores ingested from the MovieLens CSV stage. Each row represents how strongly a genome tag applies to a given movie.
+    columns:
+      - name: movie_id
+        description: Identifier for the movie being scored.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('movies')
+                field: movie_id
+      - name: tag_id
+        description: Identifier for the genome tag being scored.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('genome_tags')
+                field: tag_id
+      - name: relevance
+        description: Relevance score between 0 and 1 indicating how strongly the tag applies to the movie.
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
+        tests:
+          - not_null
+
+  - name: genome_tags
+    description: Raw genome tag definitions ingested from the MovieLens CSV stage. Each row maps a tag ID to its human-readable tag label.
+    columns:
+      - name: tag_id
+        description: Unique identifier for each genome tag.
+        tests:
+          - not_null
+          - unique
+      - name: tag
+        description: Human-readable label for the genome tag.
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
+        tests:
+          - not_null
+
+  - name: links
+    description: Raw external ID mappings ingested from the MovieLens CSV stage. Each row maps a MovieLens movie ID to its corresponding IMDb and TMDb identifiers.
+    columns:
+      - name: movie_id
+        description: MovieLens identifier for the movie.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('movies')
+                field: movie_id
+      - name: imdb_id
+        description: IMDb identifier for the movie.
+      - name: tmdb_id
+        description: The Movie Database (TMDb) identifier for the movie.
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
+        tests:
+          - not_null
