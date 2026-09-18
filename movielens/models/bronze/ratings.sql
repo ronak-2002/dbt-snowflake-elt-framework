@@ -1,7 +1,10 @@
+{% set raw_src = source('raw_data', 'raw_ratings') %}
+{% set csv_format = raw_src.database ~ '.' ~ raw_src.schema ~ '.CSV_FORMAT' %}
+
 {{
     config(
         pre_hook="""
-            CREATE OR REPLACE FILE FORMAT {{ source('raw_data', 'raw_ratings').database }}.{{ source('raw_data', 'raw_ratings').schema }}.CSV_FORMAT
+            CREATE OR REPLACE FILE FORMAT """ ~ csv_format ~ """
                 TYPE = 'CSV'
                 FIELD_DELIMITER = ','
                 SKIP_HEADER = 1
@@ -19,8 +22,11 @@ WITH stage_data AS (
         $3::FLOAT AS rating,
         $4::BIGINT AS timestamp,
         metadata$start_scan_time AS _loaded_at
-    FROM @{{ source('raw_data', 'raw_ratings') }}
-        (FILE_FORMAT => '{{ source('raw_data', 'raw_ratings').database }}.{{ source('raw_data', 'raw_ratings').schema }}.CSV_FORMAT')
+    FROM
+        @{{ raw_src }}
+        (
+            FILE_FORMAT => '{{ csv_format }}'
+        )
 )
-SELECT * FROM stage_data
 
+SELECT * FROM stage_data

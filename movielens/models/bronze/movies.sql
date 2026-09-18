@@ -1,7 +1,10 @@
+{% set raw_src = source('raw_data', 'raw_movies') %}
+{% set csv_format = raw_src.database ~ '.' ~ raw_src.schema ~ '.CSV_FORMAT' %}
+
 {{
     config(
         pre_hook="""
-            CREATE OR REPLACE FILE FORMAT {{ source('raw_data', 'raw_movies').database }}.{{ source('raw_data', 'raw_movies').schema }}.CSV_FORMAT
+            CREATE OR REPLACE FILE FORMAT """ ~ csv_format ~ """
                 TYPE = 'CSV'
                 FIELD_DELIMITER = ','
                 SKIP_HEADER = 1
@@ -18,7 +21,11 @@ WITH stage_data AS (
         $2::VARCHAR AS title,
         $3::VARCHAR AS genres,
         metadata$start_scan_time AS _loaded_at
-    FROM @{{ source('raw_data', 'raw_movies') }}
-        (FILE_FORMAT => '{{ source('raw_data', 'raw_movies').database }}.{{ source('raw_data', 'raw_movies').schema }}.CSV_FORMAT')
+    FROM
+        @{{ raw_src }}
+        (
+            FILE_FORMAT => '{{ csv_format }}'
+        )
 )
+
 SELECT * FROM stage_data

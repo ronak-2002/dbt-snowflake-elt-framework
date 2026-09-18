@@ -1,7 +1,10 @@
+{% set raw_src = source('raw_data', 'raw_genome_tags') %}
+{% set csv_format = raw_src.database ~ '.' ~ raw_src.schema ~ '.CSV_FORMAT' %}
+
 {{
     config(
         pre_hook="""
-            CREATE OR REPLACE FILE FORMAT {{ source('raw_data', 'raw_genome_tags').database }}.{{ source('raw_data', 'raw_genome_tags').schema }}.CSV_FORMAT
+            CREATE OR REPLACE FILE FORMAT """ ~ csv_format ~ """
                 TYPE = 'CSV'
                 FIELD_DELIMITER = ','
                 SKIP_HEADER = 1
@@ -17,8 +20,11 @@ WITH stage_data AS (
         $1::NUMBER AS tag_id,
         $2::VARCHAR AS tag,
         metadata$start_scan_time AS _loaded_at
-    FROM @{{ source('raw_data', 'raw_genome_tags') }}
-        (FILE_FORMAT => '{{ source('raw_data', 'raw_genome_tags').database }}.{{ source('raw_data', 'raw_genome_tags').schema }}.CSV_FORMAT')
+    FROM
+        @{{ raw_src }}
+        (
+            FILE_FORMAT => '{{ csv_format }}'
+        )
 )
-SELECT * FROM stage_data
 
+SELECT * FROM stage_data
