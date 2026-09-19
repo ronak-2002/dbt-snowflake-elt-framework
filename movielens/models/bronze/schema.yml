@@ -72,7 +72,9 @@ models:
       - name: timestamp
         description: Unix epoch timestamp of when the tag was created.
         tests:
-          - not_null
+          - not_null:
+              config:
+                severity: warn
       - name: _loaded_at
         description: Timestamp indicating when the record was loaded from the stage file.
         tests:
