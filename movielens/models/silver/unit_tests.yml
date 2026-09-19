@@ -1,0 +1,81 @@
+version: 2
+
+unit_tests:
+  - name: test_dim_movies_parsing_and_active_filter
+    description: >
+      Validates that dim_movies properly extracts movie_name and release_year,
+      and only retains active SCD2 records where dbt_valid_to is null.
+    model: dim_movies
+    given:
+      - input: ref('movies_snapshot')
+        rows:
+          - { dbt_scd_id: 'scd_1', movie_id: 1, title: 'Toy Story (1995)', genres: 'Adventure|Animation|Children', _loaded_at: '2023-01-01 00:00:00', dbt_valid_from: '2023-01-01 00:00:00', dbt_valid_to: null }
+          - { dbt_scd_id: 'scd_2', movie_id: 2, title: 'Jumanji (1995)', genres: 'Adventure|Children|Fantasy', _loaded_at: '2023-01-01 00:00:00', dbt_valid_from: '2023-01-01 00:00:00', dbt_valid_to: '2023-02-01 00:00:00' }
+          - { dbt_scd_id: 'scd_3', movie_id: 3, title: 'No Year Movie', genres: 'Drama', _loaded_at: '2023-01-01 00:00:00', dbt_valid_from: '2023-01-01 00:00:00', dbt_valid_to: null }
+    expect:
+      rows:
+        - { movie_version_key: 'scd_1', movie_id: 1, movie_name: 'Toy Story', release_year: 1995 }
+        - { movie_version_key: 'scd_3', movie_id: 3, movie_name: 'No Year Movie', release_year: null }
+
+  - name: test_dim_genres_flattening
+    description: >
+      Validates that dim_genres splits pipe-separated genres into multiple rows
+      and filters out inactive snapshot versions.
+    model: dim_genres
+    given:
+      - input: ref('movies_snapshot')
+        rows:
+          - { movie_id: 1, genres: 'Adventure|Animation|Children', dbt_valid_to: null }
+          - { movie_id: 2, genres: 'Action', dbt_valid_to: '2023-01-01 00:00:00' }
+    expect:
+      rows:
+        - { movie_id: 1, genre: 'Adventure' }
+        - { movie_id: 1, genre: 'Animation' }
+        - { movie_id: 1, genre: 'Children' }
+
+  - name: test_fct_ratings_dedup_and_timestamp
+    description: >
+      Validates that fct_ratings retains only the latest rating per user and movie,
+      and properly converts unix epoch timestamp to TIMESTAMP_NTZ.
+    model: fct_ratings
+    given:
+      - input: ref('ratings')
+        rows:
+          - { user_id: 1, movie_id: 10, rating: 3.5, timestamp: 964982703, _loaded_at: '2023-01-01 00:00:00' }
+          - { user_id: 1, movie_id: 10, rating: 4.5, timestamp: 964982900, _loaded_at: '2023-01-01 00:00:00' }
+          - { user_id: 2, movie_id: 20, rating: 5.0, timestamp: 964981247, _loaded_at: '2023-01-01 00:00:00' }
+    expect:
+      rows:
+        - { user_id: 1, movie_id: 10, rating: 4.5, rated_at: '2000-07-30 18:48:20' }
+        - { user_id: 2, movie_id: 20, rating: 5.0, rated_at: '2000-07-30 18:20:47' }
+
+  - name: test_fct_tags_dedup_and_timestamp
+    description: >
+      Validates that fct_tags deduplicates per user, movie, and tag,
+      and correctly converts unix epoch timestamp to TIMESTAMP_NTZ.
+    model: fct_tags
+    given:
+      - input: ref('tags')
+        rows:
+          - { user_id: 1, movie_id: 10, tag: 'funny', timestamp: 1445714994, _loaded_at: '2023-01-01 00:00:00' }
+          - { user_id: 1, movie_id: 10, tag: 'funny', timestamp: 1445715000, _loaded_at: '2023-01-01 00:00:00' }
+          - { user_id: 1, movie_id: 10, tag: 'classic', timestamp: 1445714900, _loaded_at: '2023-01-01 00:00:00' }
+    expect:
+      rows:
+        - { user_id: 1, movie_id: 10, tag: 'funny', tagged_at: '2015-10-24 19:30:00' }
+        - { user_id: 1, movie_id: 10, tag: 'classic', tagged_at: '2015-10-24 19:28:20' }
+
+  - name: test_dim_genome_relevance_join
+    description: >
+      Validates that dim_genome_relevance properly merges genome scores and tag labels.
+    model: dim_genome_relevance
+    given:
+      - input: ref('genome_scores')
+        rows:
+          - { movie_id: 1, tag_id: 101, relevance: 0.85, _loaded_at: '2023-01-01 00:00:00' }
+      - input: ref('genome_tags')
+        rows:
+          - { tag_id: 101, tag: 'atmospheric', _loaded_at: '2023-01-01 00:00:00' }
+    expect:
+      rows:
+        - { movie_id: 1, tag_id: 101, tag_name: 'atmospheric', relevance: 0.85 }

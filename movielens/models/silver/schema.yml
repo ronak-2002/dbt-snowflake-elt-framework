@@ -1,0 +1,165 @@
+version: 2
+
+models:
+  - name: dim_movies
+    description: >
+      Cleaned and curated dimension table of currently active movies sourced from the
+      movies SCD Type 2 snapshot (dbt_valid_to IS NULL). Contains separated movie_name
+      and release_year parsed from the raw title string.
+    columns:
+      - name: movie_version_key
+        description: Surrogate key for the SCD2 snapshot record.
+        tests:
+          - not_null
+          - unique
+      - name: movie_id
+        description: Unique identifier for each movie (natural key).
+        tests:
+          - not_null
+          - unique
+      - name: movie_name
+        description: Cleaned title of the movie with the release year stripped off.
+        tests:
+          - not_null
+      - name: release_year
+        description: Four-digit integer release year extracted from parentheses in the raw title.
+      - name: _loaded_at
+        description: Timestamp indicating when the record was initially ingested.
+        tests:
+          - not_null
+      - name: dbt_valid_from
+        description: Timestamp when this version of the movie record became valid.
+        tests:
+          - not_null
+
+  - name: dim_genres
+    description: >
+      Flattened bridge dimension table mapping movie_id to individual genres, unnested
+      from pipe-delimited genre lists in the active movies snapshot records.
+    columns:
+      - name: movie_id
+        description: Identifier of the movie.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: genre
+        description: Individual movie genre label (e.g. Comedy, Action, Drama).
+        tests:
+          - not_null
+
+  - name: dim_links
+    description: >
+      Dimension table linking MovieLens movie identifiers to external identifiers on IMDb and TMDb.
+    columns:
+      - name: movie_id
+        description: MovieLens identifier for the movie.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: imdb_id
+        description: IMDb identifier for the movie.
+      - name: tmdb_id
+        description: The Movie Database (TMDb) identifier for the movie.
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded from the stage file.
+        tests:
+          - not_null
+
+  - name: dim_genome_relevance
+    description: >
+      Consolidated genome dimension table merging genome relevance scores with human-readable
+      genome tag descriptions.
+    columns:
+      - name: movie_id
+        description: Identifier for the movie being scored.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: tag_id
+        description: Identifier for the genome tag.
+        tests:
+          - not_null
+      - name: tag_name
+        description: Human-readable tag label.
+        tests:
+          - not_null
+      - name: relevance
+        description: Relevance score between 0 and 1 indicating tag strength for the movie.
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the score was loaded.
+        tests:
+          - not_null
+
+  - name: fct_ratings
+    description: >
+      Transactional fact table recording user movie ratings, deduplicated to retain only
+      the latest rating per user and movie, with timestamps converted to TIMESTAMP_NTZ.
+    columns:
+      - name: user_id
+        description: Identifier for the user who submitted the rating.
+        tests:
+          - not_null
+      - name: movie_id
+        description: Identifier for the movie that was rated.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: rating
+        description: Rating score given by the user on a 0.5 to 5.0 scale.
+        tests:
+          - not_null
+      - name: rated_at
+        description: Timestamp in TIMESTAMP_NTZ format when the rating was submitted.
+        tests:
+          - not_null
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded.
+        tests:
+          - not_null
+
+  - name: fct_tags
+    description: >
+      Transactional fact table recording user-applied movie tags, deduplicated to retain
+      only the latest tag event per user, movie, and tag text, with timestamps converted to TIMESTAMP_NTZ.
+    columns:
+      - name: user_id
+        description: Identifier for the user who applied the tag.
+        tests:
+          - not_null
+      - name: movie_id
+        description: Identifier for the movie the tag was applied to.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: tag
+        description: Cleaned free-text tag string.
+        tests:
+          - not_null
+      - name: tagged_at
+        description: Timestamp in TIMESTAMP_NTZ format when the tag was applied.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: _loaded_at
+        description: Timestamp indicating when the record was loaded.
+        tests:
+          - not_null

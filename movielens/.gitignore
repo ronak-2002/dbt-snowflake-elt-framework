@@ -5,3 +5,4 @@ logs/
 prod_manifest/
 .env
 
+dbt_internal_packages/

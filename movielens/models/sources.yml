@@ -6,8 +6,14 @@ sources:
     schema: raw
     tables:
       - name: raw_movies
+        identifier: movielens_stage/movies.csv
       - name: raw_ratings
+        identifier: movielens_stage/ratings.csv
       - name: raw_tags
+        identifier: movielens_stage/tags.csv
       - name: raw_genome_scores
+        identifier: movielens_stage/genome_scores.csv
       - name: raw_genome_tags
+        identifier: movielens_stage/genome_tags.csv
       - name: raw_links
+        identifier: movielens_stage/links.csv
