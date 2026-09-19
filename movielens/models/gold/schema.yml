@@ -1,0 +1,166 @@
+version: 2
+
+models:
+  - name: mart_movie_rating_summary
+    description: >
+      Gold data mart aggregating movie ratings, user sentiment polarization (stddev),
+      and calibrated weighted Bayesian average scores to power movie leaderboards and recommendations.
+    columns:
+      - name: movie_id
+        description: Unique identifier for each movie.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: movie_name
+        description: Clean title of the movie.
+        tests:
+          - not_null
+      - name: release_year
+        description: Four-digit release year of the movie.
+      - name: total_ratings
+        description: Total count of ratings received by the movie.
+        tests:
+          - not_null
+      - name: avg_rating
+        description: Arithmetic mean of all ratings submitted for the movie.
+      - name: stddev_rating
+        description: Standard deviation of ratings measuring audience consensus versus polarity.
+      - name: rating_5_star_count
+        description: Total number of 5.0 star ratings received.
+        tests:
+          - not_null
+      - name: rating_1_star_count
+        description: Total number of 1.0 star ratings received.
+        tests:
+          - not_null
+      - name: bayesian_avg_rating
+        description: >
+          Weighted Bayesian average rating adjusting for sample size using dataset-wide mean
+          and a confidence threshold weight of 25.
+        tests:
+          - not_null
+      - name: rating_rank_bayesian
+        description: Dense rank of the movie ordered by descending Bayesian average rating.
+        tests:
+          - not_null
+
+  - name: mart_genre_popularity
+    description: >
+      Gold data mart analyzing consumer engagement, volume, and rating sentiment across genres
+      aggregated by monthly cohorts over time.
+    columns:
+      - name: genre
+        description: Movie genre label.
+        tests:
+          - not_null
+      - name: activity_date_month
+        description: Truncated monthly timestamp of the activity cohort.
+        tests:
+          - not_null
+      - name: activity_year
+        description: Year component of the activity date.
+        tests:
+          - not_null
+      - name: activity_month
+        description: Month component of the activity date (1-12).
+        tests:
+          - not_null
+      - name: rating_count
+        description: Count of ratings submitted for movies in this genre during the month.
+        tests:
+          - not_null
+      - name: unique_users_rating
+        description: Distinct users who rated movies in this genre during the month.
+        tests:
+          - not_null
+      - name: unique_movies_rated
+        description: Distinct movies rated in this genre during the month.
+        tests:
+          - not_null
+      - name: tag_count
+        description: Count of tags applied to movies in this genre during the month.
+        tests:
+          - not_null
+      - name: unique_users_tagging
+        description: Distinct users who tagged movies in this genre during the month.
+        tests:
+          - not_null
+
+  - name: mart_user_activity
+    description: >
+      Gold Customer 360 data mart profiling user engagement, rating volume, favorite/most reviewed genre,
+      activity tenure, and segmentation.
+    columns:
+      - name: user_id
+        description: Unique identifier for each user.
+        tests:
+          - not_null
+          - unique
+      - name: user_segment
+        description: Categorization of user activity level (Power Reviewer, Active Reviewer, Casual Rater).
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Power Reviewer', 'Active Reviewer', 'Casual Rater']
+      - name: total_ratings
+        description: Total count of ratings submitted by the user.
+        tests:
+          - not_null
+      - name: avg_rating_given
+        description: Average rating given across all movies reviewed by the user.
+      - name: rating_spread
+        description: Difference between maximum and minimum rating given by the user.
+      - name: unique_movies_rated
+        description: Number of distinct movies rated by the user.
+        tests:
+          - not_null
+      - name: total_tags
+        description: Total count of tags submitted by the user.
+        tests:
+          - not_null
+      - name: unique_movies_tagged
+        description: Number of distinct movies tagged by the user.
+        tests:
+          - not_null
+      - name: most_reviewed_genre
+        description: The genre most frequently rated by this user.
+      - name: most_reviewed_genre_count
+        description: Number of ratings submitted for the user's most reviewed genre.
+        tests:
+          - not_null
+      - name: active_lifespan_days
+        description: Total number of days between the user's first and last recorded activity.
+
+  - name: mart_movie_genome_insights
+    description: >
+      Gold data mart summarizing the top 5 most relevant genome descriptive tags and maximum tag
+      relevance score for each movie.
+    columns:
+      - name: movie_id
+        description: Identifier for the movie.
+        tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('dim_movies')
+                field: movie_id
+      - name: movie_name
+        description: Name of the movie.
+        tests:
+          - not_null
+      - name: release_year
+        description: Release year of the movie.
+      - name: max_tag_relevance
+        description: Highest genome relevance score across all tags for this movie.
+        tests:
+          - not_null
+      - name: top_genome_tags
+        description: Array of the top 5 highest-relevance genome tags for the movie.
+        tests:
+          - not_null
